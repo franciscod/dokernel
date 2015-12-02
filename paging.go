@@ -1,4 +1,4 @@
-package dokernel
+package main
 
 import (
 	"reflect"
