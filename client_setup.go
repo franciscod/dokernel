@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/franciscod/godo"
+	"github.com/digitalocean/godo"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/oauth2"
 )

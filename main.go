@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/alexflint/go-arg"
-	"github.com/franciscod/godo"
+	"github.com/digitalocean/godo"
 )
 
 func printKernel(kernel *godo.Kernel) {

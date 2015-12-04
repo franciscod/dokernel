@@ -3,7 +3,7 @@ package main
 import (
 	"reflect"
 
-	"github.com/franciscod/godo"
+	"github.com/digitalocean/godo"
 )
 
 func getList(client *godo.Client, t interface{}, dropletID int) (interface{}, error) {
