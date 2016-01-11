@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 
-	"github.com/alexflint/go-arg"
 	"github.com/digitalocean/godo"
+	"github.com/docopt/docopt-go"
 )
 
 func printKernel(kernel *godo.Kernel) {
@@ -45,48 +47,72 @@ func printAllDroplets(client *godo.Client) {
 	}
 }
 
+func getIntArgument(arguments map[string]interface{}, name string) int {
+	if arguments[name] == nil {
+		return 0
+	}
+
+	val, err := strconv.Atoi(arguments[name].(string))
+
+	if err != nil {
+		fmt.Println(name + " should be an integer")
+		os.Exit(1)
+	}
+
+	return val
+}
+
 func main() {
 
-	var args struct {
-		List      bool `arg:"-l"`
-		Set       bool `arg:"-s"`
-		PowerOn   bool `arg:"-p"`
-		Actions   bool `arg:"-a"`
-		DropletID int  `arg:"positional"`
-		KernelID  int  `arg:"positional"`
-	}
-	arg.MustParse(&args)
+	usage := `
+dokernel - a tool for changing digitalocean.com kernels
 
-	if !(args.Set || args.List || args.Actions || args.PowerOn) {
-		args.List = true
-	}
+Usage:
+  dokernel list [DROPLETID]
+  dokernel set DROPLETID KERNELID
+  dokernel poweron DROPLETID
+  dokernel actions
+`
 
-	if !args.Set && args.KernelID != 0 {
-		fmt.Println("You provided a kernel id but didn't use --set, exiting. (see --help)")
-		return
+	arguments, err := docopt.Parse(usage, nil, true, "dokernel 0.0.0", false)
+
+	if err != nil {
+		fmt.Println(err)
 	}
 
 	client := clientFromToken(readTokenFromFile())
 
-	if args.List {
-		if args.DropletID == 0 {
+	list := arguments["list"].(bool)
+	set := arguments["set"].(bool)
+	poweron := arguments["poweron"].(bool)
+	actions := arguments["actions"].(bool)
+
+	dropletID := getIntArgument(arguments, "DROPLETID")
+	kernelID := getIntArgument(arguments, "KERNELID")
+
+	if list {
+
+		if dropletID == 0 {
+
 			printAllDroplets(client)
+
 		} else {
-			droplet, _, err := client.Droplets.Get(args.DropletID)
+
+			droplet, _, err := client.Droplets.Get(dropletID)
+
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
 
 			printDroplet(client, droplet)
-		}
-	} else if args.Set {
-		if args.DropletID == 0 || args.KernelID == 0 {
-			fmt.Println("Both droplet and kernel ID are required. (see --help)")
-			return
+
 		}
 
-		action, _, err := client.DropletActions.ChangeKernel(args.DropletID, args.KernelID)
+	} else if set {
+
+		action, _, err := client.DropletActions.ChangeKernel(dropletID, kernelID)
+
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -95,25 +121,23 @@ func main() {
 		fmt.Println("Kernel change requested. Action ID is", action.ID, "and status is", action.Status)
 		fmt.Println("Keep in mind the kernel will only change when the droplet is powered off!")
 
-	} else if args.PowerOn {
-		if args.DropletID == 0 {
-			fmt.Println("Droplet ID is required. (see --help)")
-			return
-		}
+	} else if poweron {
 
-		action, _, err := client.DropletActions.PowerOn(args.DropletID)
+		action, _, err := client.DropletActions.PowerOn(dropletID)
+
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
 		fmt.Println("Power on requested. Action ID is", action.ID, "and status is", action.Status)
-	} else if args.Actions {
+
+	} else if actions {
+
 		as, _ := actionList(client)
 
 		for _, a := range as {
 			fmt.Println(a.ID, a.Type, a.Status, a.StartedAt, a.CompletedAt)
 		}
 	}
-
 }
